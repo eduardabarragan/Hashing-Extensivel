@@ -34,8 +34,29 @@ class Diretorio:
         return strDir
 
 class HashingExtencivel:
-    def __init__(self):
+    def _init_(self):
         pass
 
-    def gerar_endereco():
+    def gerar_endereco(chave): #aplicar hash(vai ser o valor da chave em binario) e considerar a profundidade global
+        pass
+
+    def carregar_diretorio():
+        pass
+
+    def salvar_diretorio():
+        pass
+
+    def inserir(chave):
+        pass
+
+    def buscar(chave):
+        pass
+
+    def remover(chave):
+        pass
+
+    def imprimir_diretorio():
+        pass
+
+    def imprimir_buckets():
         pass
