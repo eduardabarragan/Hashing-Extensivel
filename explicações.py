@@ -46,3 +46,56 @@ def inserir_chave_bk(self, chave, ref_bk, bucket):
     else:
         self.dividir_bk(ref_bk, bucket)
         self.op_inserir(chave)
+
+#Lógica da função dividir_bk(ref_bk, bucket)
+def dividir_bk(self, ref_bk, bucket):
+    '''
+    A função divide o bucket apontado por ref_bk (bucket) em dois, criando um novo bucket.
+    Se necessário, o diretório é dobrado. Os ponteiros do diretório são atualizados para apontar
+    corretamente para os novos buckets, e os registros são redistribuídos com base na nova profundidade.
+    '''
+
+    # Caso a profundidade local seja igual à global, é necessário dobrar o diretório.
+    if bucket.prof == self.prof_dir:
+        self.dobrar_dir()  # duplica o tamanho do diretório e incrementa prof_dir
+
+    # Cria um novo bucket e aloca espaço (gerando um novo RRN)
+    novo_bucket = Bucket()
+    ref_novo_bucket = self.alocar_novo_bucket(novo_bucket)
+
+    # Aumenta a profundidade local de ambos
+    bucket.prof += 1
+    novo_bucket.prof = bucket.prof
+
+    # Atualiza os ponteiros do diretório:
+    # todas as posições que apontavam para o bucket antigo e que agora correspondem
+    # ao novo sufixo, passam a apontar para o novo bucket.
+    for i in range(len(self.dir.refs)):
+        endereco_bin = format(i, f'0{self.prof_dir}b')  # representação binária do índice
+        sufixo = endereco_bin[-bucket.prof:]  # últimos bits que representam o bucket
+        sufixo_original = format(i, f'0{self.prof_dir}b')[-(bucket.prof - 1):] + '0'
+        sufixo_novo = format(i, f'0{self.prof_dir}b')[-(bucket.prof - 1):] + '1'
+
+        if self.dir.refs[i] == ref_bk:
+            if sufixo[-1] == '1':
+                self.dir.refs[i] = ref_novo_bucket  # atualiza para novo bucket
+
+    # Redistribui os registros entre bucket e novo_bucket
+    todos = bucket.registros.copy()
+    bucket.registros.clear()
+    novo_bucket.registros.clear()
+
+    for chave in todos:
+        endereco = gerar_endereço(chave, bucket.prof)
+        if self.dir.refs[endereco] == ref_bk:
+            bucket.registros.append(chave)
+        else:
+            novo_bucket.registros.append(chave)
+
+    # Atualiza contadores
+    bucket.cont = len(bucket.registros)
+    novo_bucket.cont = len(novo_bucket.registros)
+
+    # Escreve os buckets atualizados no arquivo
+    escrever_bucket(ref_bk, bucket)
+    escrever_bucket(ref_novo_bucket, novo_bucket)

@@ -132,7 +132,38 @@ class HashingExtensivel:
             self.op_inserir(chave)  # Recursão indireta
 
     def dividir_bk(self, ref_bk, bucket):
-        pass
+
+        if bucket.prof == self.prof_dir:
+            self.dobrar_dir()
+
+        novo_bucket = Bucket()
+        ref_novo_bucket = self.alocar_novo_bucket(novo_bucket)
+
+        bucket.prof += 1
+        novo_bucket.prof = bucket.prof
+
+        for i in range(len(self.dir.refs)):
+            endereco_bin = format(i, f'0{self.prof_dir}b')  # binário do índice com padding
+            if endereco_bin[-bucket.prof:] == gerar_endereco_bits(ref_novo_bucket, bucket.prof):
+                if self.dir.refs[i] == ref_bk:
+                    self.dir.refs[i] = ref_novo_bucket
+
+        todos = bucket.registros.copy()
+        bucket.registros.clear()
+        novo_bucket.registros.clear()
+
+        for chave in todos:
+            endereco = gerar_endereço(chave, bucket.prof)
+            if self.dir.refs[endereco] == ref_bk:
+                bucket.registros.append(chave)
+            else:
+                novo_bucket.registros.append(chave)
+
+        bucket.cont = len(bucket.registros)
+        novo_bucket.cont = len(novo_bucket.registros)
+
+        escrever_bucket(ref_bk, bucket)
+        escrever_bucket(ref_novo_bucket, novo_bucket)
 
 
     def dobrar_dir(self):
