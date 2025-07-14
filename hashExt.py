@@ -67,9 +67,10 @@ class HashingExtencivel:
     #Funcao de insercao
     def op_inserir(self, chave):
         achou, ref_bk, bk_encontrado = self.op_buscar(chave) #busca pela chave usando a função op_buscar
+        #se a chave for encontrada:
         if achou:
             return False  # Erro: chave duplicada
-        self.inserir_chave_bk(chave, ref_bk, bk_encontrado) # chama a função inserir_chave_bk e estuda os casos 
+        self.inserir_chave_bk(chave, ref_bk, bk_encontrado) # chama a função inserir_chave_bk e estuda os casos, para conseguir inserir adequadamente 
         return True
 
     def inserir_chave_bk(self, chave, ref_bk, bucket):
@@ -83,14 +84,19 @@ class HashingExtencivel:
             self.dividir_bk(ref_bk, bucket)
             self.op_inserir(chave)  # Recursão indireta
 
-    def dividir_bk (ref_bk, bucket):
+    def dividir_bk(self, ref_bk, bucket):
         pass
 
-    def dobrar_dir():
-        pass
 
-    def encontrar_novo_intervalo(bucket):
-        pass
+    def dobrar_dir(self):
+        #caso o diretório precise ser espandido, essa funçao serve para dobrar o tamanho do diretório 
+        novas_refs = []
+        #Insere cada referência em dir.refs duas vezes em novas_refs
+        for ref in self.dir.refs:
+            novas_refs.append(ref)  # primeira 
+            novas_refs.append(ref)  # segunda
+        self.dir.refs = novas_refs # substitui a lista de referências do diretório
+        self.dir.dirProf += 1 # incrementa a profundidade global do diretório
 
     def encontrar_novo_intervalo(bucket):
         pass
