@@ -39,3 +39,46 @@ class HashingExtencivel:
 
     def gerar_endereco():
         pass
+
+    #Funcao de busca
+    def op_buscar(chave):
+        pass
+
+    #Funcao de insercao
+    def op_inserir(chave):
+        pass
+
+    def inserir_chave_bk(chave, ref_bk, bucket):
+        pass
+
+    def dividir_bk (ref_bk, bucket):
+        pass
+
+    def dobrar_dir():
+        pass
+
+    def encontrar_novo_intervalo(bucket):
+        pass
+
+    def encontrar_novo_intervalo(bucket):
+        pass
+    
+    #Funcao de remocao
+    def op_remover(chave):
+        pass
+
+    def remover_chave_bk(chave, ref_bk, bucket):
+        pass
+
+    def tentar_combinar_bk (chave_removida, ref_bk, bucket):
+        pass
+
+    def encontrar_bk_amigo(chave_removida, bucket):
+        pass
+
+    def combinar_bk(ref_bk, bucket, ref_amigo, bk_amigo):
+        pass
+
+    def tentar_diminuir_dir():
+        pass
+
