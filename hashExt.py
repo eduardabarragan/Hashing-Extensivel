@@ -54,7 +54,15 @@ class HashingExtencivel:
 
     #Funcao de busca
     def op_buscar(chave):
-        pass
+        endereço=gerar_endereço(chave,prof_dir) 
+        ref_bk=dir.refs[endereço]
+        bk_encontrado= ler_bucket(ref_bk)
+        for registro in bk_encontrado:
+            if registro.chave==chave:
+                return True, ref_bk,bk_encontrado
+            
+        return False, ref_bk, bk_encontrado
+
 
     #Funcao de insercao
     def op_inserir(chave):
