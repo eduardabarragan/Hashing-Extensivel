@@ -19,7 +19,7 @@ class Bucket:
         self.prof = prof
         self.cont = contChaves
         chaves += [NULO]*(MAX_BK_SIZE - len(chaves))
-        self.chaves = chaves
+        self.registros = [] #Lista com os registros que estão no bucket
 
 class Diretorio:
     def __init__(self, bkRef: int = 0) -> None:
@@ -54,7 +54,15 @@ class HashingExtencivel:
 
     #Funcao de busca
     def op_buscar(chave):
-        pass
+        endereço=gerar_endereço(chave,prof_dir) 
+        ref_bk=dir.refs[endereço]
+        bk_encontrado= ler_bucket(ref_bk)
+        for registro in bk_encontrado.registros:
+            if registro.chave==chave:
+                return True, ref_bk,bk_encontrado
+            
+        return False, ref_bk, bk_encontrado
+
 
     #Funcao de insercao
     def op_inserir(self, chave):
