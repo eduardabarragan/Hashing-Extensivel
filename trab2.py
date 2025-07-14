@@ -13,11 +13,11 @@ def executa_operacao(arquivo_op):
             chave = int(valor)
 
             if op == 'i':
-                print(he.inserir(chave))
+                print(he.op_inserir(chave))
             elif op == 'b':
-                print(he.buscar(chave))
+                print(he.op_buscar(chave))
             elif op == 'r':
-                print(he.remover(chave))
+                print(he.op_remover(chave))
 
     he.salvar_diretorio()
     

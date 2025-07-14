@@ -46,15 +46,6 @@ class HashingExtencivel:
     def salvar_diretorio():
         pass
 
-    def inserir(chave):
-        pass
-
-    def buscar(chave):
-        pass
-
-    def remover(chave):
-        pass
-
     def imprimir_diretorio():
         pass
 
