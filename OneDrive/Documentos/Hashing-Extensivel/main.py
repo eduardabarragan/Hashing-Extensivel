@@ -38,7 +38,7 @@ def main() -> None:
     if len(argv) == 3 and argv[1] == '-e':
         executa_operacao(argv[2])
     elif len(argv) == 2 and argv[1] == '-pd':
-        imprime_diretorio()
+        imprime_dir()
     elif len(argv) == 2 and argv[1] == '-pb':
         imprime_buckets()
     
