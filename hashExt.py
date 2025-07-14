@@ -74,7 +74,10 @@ class HashingExtencivel:
 
     def inserir_chave_bk(self, chave, ref_bk, bucket):
         if bucket.cont < MAX_BK_SIZE: # se encontrar espaço, a chave é inserida e a operação trmina
-            # n sei 
+            bucket.registros.append(chave)
+            bucket.cont+=1
+            escrever_bucket(ref_bk,bucket) #salva no arquivo
+
         else: 
             # Se o bucket estiver cheio, chama a função dividir_bk e tenta inserir novamente
             self.dividir_bk(ref_bk, bucket)
