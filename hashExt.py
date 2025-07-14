@@ -57,11 +57,20 @@ class HashingExtencivel:
         pass
 
     #Funcao de insercao
-    def op_inserir(chave):
-        pass
+    def op_inserir(self, chave):
+        achou, ref_bk, bk_encontrado = self.op_buscar(chave) #busca pela chave usando a função op_buscar
+        if achou:
+            return False  # Erro: chave duplicada
+        self.inserir_chave_bk(chave, ref_bk, bk_encontrado) # chama a função inserir_chave_bk e estuda os casos 
+        return True
 
-    def inserir_chave_bk(chave, ref_bk, bucket):
-        pass
+    def inserir_chave_bk(self, chave, ref_bk, bucket):
+        if bucket.cont < MAX_BK_SIZE: # se encontrar espaço, a chave é inserida e a operação trmina
+            # n sei 
+        else: 
+            # Se o bucket estiver cheio, chama a função dividir_bk e tenta inserir novamente
+            self.dividir_bk(ref_bk, bucket)
+            self.op_inserir(chave)  # Recursão indireta
 
     def dividir_bk (ref_bk, bucket):
         pass
