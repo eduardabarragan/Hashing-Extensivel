@@ -163,11 +163,22 @@ class HashingExtensivel:
             novas_refs.append(ref)  # primeira 
             novas_refs.append(ref)  # segunda
         self.dir.refs = novas_refs # substitui a lista de referências do diretório
-        self.dir.dirProf += 1 # incrementa a profundidade global do diretório
+        self.dir.prof_dir += 1 # incrementa a profundidade global do diretório
 
-    def encontrar_novo_intervalo(bucket):
-        pass
-    
+    def encontrar_novo_intervalo(self, bucket:Bucket):
+        mascara = 1
+        chave = bucket.chaves[0]
+        end_comum = self.gerar_endereco(chave, bucket.prof)
+        end_comum = end_comum << 1
+        end_comum = end_comum | mascara
+        bits_a_preencher = self.dir.prof_dir - (bucket.prof + 1)
+        novo_inicio, novo_fim = end_comum, end_comum
+        for i in range(bits_a_preencher):
+            novo_inicio = novo_inicio << 1
+            novo_fim = novo_fim << 1
+            novo_fim = novo_fim | mascara
+        return novo_inicio, novo_fim
+
     #Funcao de remocao
     def op_remover(chave):
         pass
