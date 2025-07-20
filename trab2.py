@@ -1,10 +1,10 @@
 from sys import argv
-from hashExt import HashingExtencivel
+from hashExt import HashingExtensivel
 
 #em todas as implementações deve-se chamar as funções do hashExt
 
 def executa_operacao(arquivo_op):
-    he = HashingExtencivel() #instância da classe Hashing
+    he = HashingExtensivel() #instância da classe Hashing
     he.carregar_diretorio() #(implementar na classe Hashing ainda). Lê o arquivo diretorio.dat e carrega ele na memória
 
     with open(arquivo_op, 'r') as arq_aberto: #abre arquivo de operações
@@ -23,13 +23,13 @@ def executa_operacao(arquivo_op):
     
 
 def imprime_diretorio():
-    he = HashingExtencivel()
+    he = HashingExtensivel()
     he.carregar_diretorio()
     he.imprimir_diretorio()
     
 
 def imprime_buckets():
-    he = HashingExtencivel()
+    he = HashingExtensivel()
     he.carregar_diretorio()
     he.imprimir_buckets()
 

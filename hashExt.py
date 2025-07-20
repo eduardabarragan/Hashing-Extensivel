@@ -3,39 +3,41 @@ import io
 import os
 
 #Constantes
-ARQUIVO_BK = "bucket.dat"
-ARQUIVO_DIR = "dir.dat"
-MAX_BK_SIZE = 5
+ARQUIVO_BK = "buckets.dat"
+ARQUIVO_DIR = "diretorio.dat"
+TAM_MAX_BK = 5
 NULO = -1
 
 FORMATO_PROF = f'i'
 PROFSIZE = calcsize(FORMATO_PROF)
 FORMATO_REF = f'i'
 REFSIZE = calcsize(FORMATO_REF)
-#Formato para struct bucket: int prof, int contaChaves, MK_BK_SIZE ints para chaves
-FORMATO_BK = f'ii{MAX_BK_SIZE}i'
+#Formato para struct bucket: int prof, int contaChaves, TAM_MAX_BK ints para chaves
+FORMATO_BK = f'ii{TAM_MAX_BK}i'
 BKSIZE = calcsize(FORMATO_BK)
 
 #Revisar 
 class Bucket:
 
-    def __init__(self, prof = 0, contChaves= 0, chaves = []) -> None:
-        assert len(chaves) <= MAX_BK_SIZE, 'Erro: número de chaves maior do que o máximo permitido'
+    def __init__(self, prof = 0, cont= 0, chaves = []) -> None:
+        assert len(chaves) <= TAM_MAX_BK, 'Erro: número de chaves maior do que o máximo permitido'
         self.prof = prof
-        self.cont = contChaves
-        chaves += [NULO]*(MAX_BK_SIZE - len(chaves))
-        self.registros = [] #Lista com os registros que estão no bucket
+        self.cont = cont
+        chaves += [NULO]*(TAM_MAX_BK - len(chaves))
+        self.chaves = chaves
+        
 
-#Revisar funcao 
+
 class Diretorio:
-    def __init__(self, bkRef: int = 0) -> None:
+    def __init__(self, ref_bk: int = 0) -> None:
         self.prof_dir = 0
-        self.refs = [bkRef] 
-    
+        self.refs = [ref_bk]
+
+    #Talvez não usar essa função aqui
     def __str__(self) -> str:
         tam = pow(2, self.prof_dir)
         strDir = f'Tamanho atual do diretorio = {tam}\n'
-        for i, ref in enumerate(self.refs):
+        for i, ref in enumerate(self.refs): #Revisar o uso do enumerate
             strDir += f'dir[{i}] = bucket[{ref}]\n'
         return strDir
 
@@ -72,8 +74,7 @@ class HashingExtensivel:
             #Cria um objeto diretorio e atribua a dir
             self.dir = Diretorio()
             #Inicializa prof_dir com 0
-            self.dir.prof_dir = 0 #Ver com a Valeria se precisa msm pq o propria clase faz isso
-          
+            self.dir.prof_dir = 0 
 
             #Cria um bucket vazio no arquivo de buckets
             bucket = Bucket()
@@ -85,51 +86,70 @@ class HashingExtensivel:
             #Atribua seu RRN ao dir.refs
             self.dir.refs == [0]
 
-            #Salva a profundidade e o RRN no arquivo de diretório
-            self.arq_dir.seek(0)
-            self.arq_dir.write(pack(FORMATO_PROF, self.dir.prof_dir))
-            self.arq_dir.write(pack(FORMATO_REF, self.dir.refs[0]))
 
+    def gerar_endereco(chave, profundidade):
+        '''Função hash para gerar endereço da chave'''
+        val_ret = 0 #Armazenará a sequência de bits
+        mascara = 1 #Para extrair o bit menos significativo
+        val_hash = chave 
+        for j in range(profundidade):
+            val_ret = val_ret << 1 #Extrai o bit de mais baixa ordem de val_hash
+            bit_baixa_ordem = val_hash & mascara
+            val_ret = val_ret | bit_baixa_ordem #Insire bit_baixa_ordem no final de val_ret
+            val_hash = val_hash >> 1
 
-
-
-
-
-    def gerar_endereco(chave): #aplicar hash(vai ser o valor da chave em binario) e considerar a profundidade global
-        #Eduarda
-        pass
+        return val_ret
 
     #Funcao de busca
-    def op_buscar(chave):
-        endereço=gerar_endereço(chave,prof_dir) 
-        ref_bk=dir.refs[endereço]
-        bk_encontrado= ler_bucket(ref_bk)
-        for registro in bk_encontrado.registros:
-            if registro.chave==chave:
-                return True, ref_bk,bk_encontrado
-            
-        return False, ref_bk, bk_encontrado
+    def op_buscar(self,chave):
+        with open(ARQUIVO_BK, 'rb') as arq_bk:
+            endereco = self.gerar_endereco(chave,self.dir.prof_dir) 
+            ref_bk = self.dir.refs[endereco]
+
+            #Posiciona o ponteiro para encontrar o bucket da ref_bk
+            arq_bk.seek(ref_bk * BKSIZE)
+            bk_bytes = arq_bk.read(BKSIZE)
+
+            #Le os dados correspondentes
+            bk_encontrado = unpack(FORMATO_BK,bk_bytes)
+            prof_bk = bk_encontrado[0]
+            cont_bk = bk_encontrado[1]
+            chaves = bk_encontrado[2: 2 + cont_bk]
+
+            #Procura pela chave
+            for reg in chaves:
+                if reg == chave:
+                    return True, ref_bk,bk_encontrado
+                
+            return False, ref_bk, bk_encontrado
 
 
     #Funcao de insercao
     def op_inserir(self, chave):
-        achou, ref_bk, bk_encontrado = self.op_buscar(chave) #busca pela chave usando a função op_buscar
-        #se a chave for encontrada:
+        #busca pela chave usando a função op_buscar
+        achou, ref_bk, bk_encontrado = self.op_buscar(chave)
         if achou:
             return False  # Erro: chave duplicada
-        self.inserir_chave_bk(chave, ref_bk, bk_encontrado) # chama a função inserir_chave_bk e estuda os casos, para conseguir inserir adequadamente 
+        self.inserir_chave_bk(chave, ref_bk, bk_encontrado) 
         return True
 
-    def inserir_chave_bk(self, chave, ref_bk, bucket):
-        if bucket.cont < MAX_BK_SIZE: # se encontrar espaço, a chave é inserida e a operação trmina
-            bucket.registros.append(chave)
+    def inserir_chave_bk(self, chave, ref_bk, bucket:Bucket):
+        #se encontrar espaço, a chave é inserida e a operação termina
+        if bucket.cont < TAM_MAX_BK: 
+            #Insere a chave no bucket
+            posi_nulo =  bucket.cont
+            bucket.chaves[posi_nulo] = chave
             bucket.cont+=1
-            escrever_bucket(ref_bk,bucket) #salva no arquivo
+
+            #Escreve no arquivo de buckets
+            with open(ARQUIVO_BK, 'r+b') as arq_bk:
+                arq_bk.seek(ref_bk * BKSIZE)
+                arq_bk.write(pack(FORMATO_BK,bucket.prof,bucket.cont, *bucket.chaves))
 
         else: 
             # Se o bucket estiver cheio, chama a função dividir_bk e tenta inserir novamente
             self.dividir_bk(ref_bk, bucket)
-            self.op_inserir(chave)  # Recursão indireta
+            self.op_inserir(chave)  #Recursão indireta
 
     def dividir_bk(self, ref_bk, bucket):
         pass
@@ -166,6 +186,24 @@ class HashingExtensivel:
 
     def tentar_diminuir_dir():
         pass
+
+    def finaliza(self):
+        #Abre o arquivo de diretorio e de buckets
+        arq_bk = open(ARQUIVO_BK, 'rb')
+        arq_dir = open(ARQUIVO_DIR,'wb')
+        arq_dir.seek(0)
+
+        #Escreve a profundidade
+        arq_dir.write(pack(FORMATO_PROF, self.dir.prof_dir))
+
+        #Escreve os RRN's dos buckets
+        for ref in self.dir.refs:
+            arq_dir.write(pack(FORMATO_REF, ref))
+        
+        #Fecha os arquivos
+        arq_dir.close()
+        arq_bk.close()
+        
 
 #Nao tem pseudocodigo
     def carregar_diretorio():
