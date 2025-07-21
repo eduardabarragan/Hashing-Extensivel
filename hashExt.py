@@ -110,14 +110,15 @@ class HashingExtensivel:
             arq_bk.seek(ref_bk * BKSIZE)
             bk_bytes = arq_bk.read(BKSIZE)
 
-            #Le os dados correspondentes
-            bk_encontrado = unpack(FORMATO_BK,bk_bytes)
-            prof_bk = bk_encontrado[0]
-            cont_bk = bk_encontrado[1]
-            chaves = bk_encontrado[2: 2 + cont_bk]
+            #Le os dados correspondentes para bk_encontrado
+            bk_encontrado = Bucket()
+            dados_bk = unpack(FORMATO_BK,bk_bytes)
+            bk_encontrado.prof = dados_bk[0]
+            bk_encontrado.cont = dados_bk[1]
+            bk_encontrado.chaves = dados_bk[2: 2 + bk_encontrado.cont]
 
             #Procura pela chave
-            for reg in chaves:
+            for reg in bk_encontrado.chaves:
                 if reg == chave:
                     return True, ref_bk,bk_encontrado
                 
@@ -125,7 +126,7 @@ class HashingExtensivel:
 
 
     #Funcao de insercao
-    def op_inserir(self, chave):
+    def op_inserir(self, chave: int):
         #busca pela chave usando a função op_buscar
         achou, ref_bk, bk_encontrado = self.op_buscar(chave)
         if achou:
@@ -133,7 +134,7 @@ class HashingExtensivel:
         self.inserir_chave_bk(chave, ref_bk, bk_encontrado) 
         return True
 
-    def inserir_chave_bk(self, chave, ref_bk, bucket:Bucket):
+    def inserir_chave_bk(self, chave:int, ref_bk: int, bucket:Bucket):
         #se encontrar espaço, a chave é inserida e a operação termina
         if bucket.cont < TAM_MAX_BK: 
             #Insere a chave no bucket
@@ -141,7 +142,7 @@ class HashingExtensivel:
             bucket.chaves[posi_nulo] = chave
             bucket.cont+=1
 
-            #Escreve no arquivo de buckets
+            #Escreve em ref_bk no arquivo de buckets
             with open(ARQUIVO_BK, 'r+b') as arq_bk:
                 arq_bk.seek(ref_bk * BKSIZE)
                 arq_bk.write(pack(FORMATO_BK,bucket.prof,bucket.cont, *bucket.chaves))
@@ -151,12 +152,65 @@ class HashingExtensivel:
             self.dividir_bk(ref_bk, bucket)
             self.op_inserir(chave)  #Recursão indireta
 
-    def dividir_bk(self, ref_bk, bucket):
-        pass
+    def dividir_bk(self, ref_bk: int, bucket: Bucket):
+        if bucket.prof == self.dir.prof_dir:
+            self.dobrar_dir()
+
+        #Crie um novo_bucket
+        novo_bk: Bucket = Bucket()
+        arq_bk = open(ARQUIVO_BK, 'rb+')
+
+        #Atribui o seu RRN a ref_novo_bucket
+        arq_bk.seek(0, 2)  
+        tam_arq = arq_bk.tell()
+        ref_novo_bucket = tam_arq // BKSIZE
+
+        novo_inicio, novo_fim = self.encontrar_novo_intervalo(bucket)
+        #Insere novo_bucket no dir de acordo com novo_inicio e novo_fim
+        for i in range(novo_inicio,novo_fim + 1):
+            self.dir.refs[i] = ref_novo_bucket
+        
+        #Incrementa bucket.prof e novo_bucket.prof receber bucket.prof
+        bucket.prof += 1
+        novo_bk.prof = bucket.prof
+
+        #Redistribui as chaves entre bucket e novo_bucket considerando a dir_prof
+        redistribuir = []
+        bucket.chaves = []
+        novo_bk.chaves = []
+
+        for chave in bucket.chaves:
+            if chave != NULO:
+                redistribuir.append(chave)
+
+        for chave in redistribuir:
+            endereco = self.gerar_endereco(chave,self.dir.prof_dir) 
+            ref = self.dir.refs[endereco]
+            if ref == ref_novo_bucket:
+                novo_bk.chaves.append(chave)
+            else:
+                bucket.chaves.append(chave)
+
+        #Preenche o final com NULO até TAM_MAX_BK
+        bucket.cont = len(bucket.chaves)
+        bucket.chaves += [NULO]*(TAM_MAX_BK - bucket.cont )
+
+        novo_bk.cont = len(novo_bk.chaves)
+        novo_bk.chaves += [NULO]*(TAM_MAX_BK - novo_bk.cont)
+
+        #Escreva bucket e novo_bucket nos respectivos RRNs do arquivo de buckets
+        arq_bk.seek(ref_bk * BKSIZE)
+        dados_bk = pack(FORMATO_BK, bucket.prof, bucket.cont, *bucket.chaves)
+        arq_bk.write(dados_bk)
+        
+        arq_bk.seek(ref_novo_bucket * BKSIZE)
+        dados_novo_bk = pack(FORMATO_BK, novo_bk.prof, novo_bk.cont, *novo_bk.chaves)
+        arq_bk.write(dados_novo_bk)
+
 
 
     def dobrar_dir(self):
-        #caso o diretório precise ser espandido, essa funçao serve para dobrar o tamanho do diretório 
+        '''Caso o diretório precise ser espandido, essa funçao serve para dobrar o tamanho do diretório '''
         novas_refs = []
         #Insere cada referência em dir.refs duas vezes em novas_refs
         for ref in self.dir.refs:
