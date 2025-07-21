@@ -25,21 +25,11 @@ class Bucket:
         self.cont = cont
         chaves += [NULO]*(TAM_MAX_BK - len(chaves))
         self.chaves = chaves
-        
-
 
 class Diretorio:
     def __init__(self, ref_bk: int = 0) -> None:
         self.prof_dir = 0
         self.refs = [ref_bk]
-
-    #Talvez não usar essa função aqui
-    def __str__(self) -> str:
-        tam = pow(2, self.prof_dir)
-        strDir = f'Tamanho atual do diretorio = {tam}\n'
-        for i, ref in enumerate(self.refs): #Revisar o uso do enumerate
-            strDir += f'dir[{i}] = bucket[{ref}]\n'
-        return strDir
 
 class HashingExtensivel:
     def __init__(self, arq_bk = ARQUIVO_BK, arq_dir = ARQUIVO_DIR):
@@ -277,8 +267,13 @@ class HashingExtensivel:
     def salvar_diretorio():
         pass
 
-    def imprimir_diretorio():
-        pass
-
+    def imprimir_diretorio(self,):
+        tam = pow(2, self.dir.prof_dir)
+        saida = f'Tamanho atual do diretorio = {tam}\n'
+        for i, ref in enumerate(self.dir.refs): #Revisar o uso do enumerate
+            saida += f'dir[{i}] = bucket[{ref}]\n'
+        return saida
+      
+        
     def imprimir_buckets():
         pass

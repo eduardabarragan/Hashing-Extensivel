@@ -1,11 +1,22 @@
 from sys import argv
 from hashExt import HashingExtensivel
 
-#em todas as implementações deve-se chamar as funções do hashExt
 
-def executa_operacao(arquivo_op):
-    he = HashingExtensivel() #instância da classe Hashing
-    he.carregar_diretorio() #(implementar na classe Hashing ainda). Lê o arquivo diretorio.dat e carrega ele na memória
+def buscar(he: HashingExtensivel, chave: int):
+    achou,ref_bk, bk_encontrado = he.op_buscar(chave)
+    if achou:
+        print(f'> Busca pela chave {chave}: Chave encontrada no bucket {ref_bk}')
+    
+    else:
+        print(f'> Busca pela chave {chave}: Chave não encontrada.')
+
+def inserir(he: HashingExtensivel, chave: int):
+    pass
+
+def remover(he: HashingExtensivel, chave: int):
+    pass
+
+def executa_operacao(arquivo_op, he):
 
     with open(arquivo_op, 'r') as arq_aberto: #abre arquivo de operações
         for linha in arq_aberto:
@@ -13,33 +24,29 @@ def executa_operacao(arquivo_op):
             chave = int(valor)
 
             if op == 'i':
-                print(he.op_inserir(chave))
+                inserir(he, chave)
             elif op == 'b':
-                print(he.op_buscar(chave))
+                buscar(he, chave)
             elif op == 'r':
-                print(he.op_remover(chave))
+                remover(he, chave)
 
-    he.salvar_diretorio()
     
-
-def imprime_diretorio():
-    he = HashingExtensivel()
-    he.carregar_diretorio()
+def imprime_diretorio(he: HashingExtensivel):
     he.imprimir_diretorio()
-    
 
-def imprime_buckets():
-    he = HashingExtensivel()
-    he.carregar_diretorio()
+def imprime_buckets(he: HashingExtensivel):
     he.imprimir_buckets()
 
 
 def main() -> None:
+    he = HashingExtensivel() #instância da classe Hashing
+
     if len(argv) == 3 and argv[1] == '-e':
-        executa_operacao(argv[2])
+        executa_operacao(argv[2], he)
     elif len(argv) == 2 and argv[1] == '-pd':
-        imprime_diretorio()
+        imprime_diretorio(he)
     elif len(argv) == 2 and argv[1] == '-pb':
-        imprime_buckets()
-    
+        imprime_buckets(he)
+
+    he.finaliza()
     #implementar tratamento de erros
