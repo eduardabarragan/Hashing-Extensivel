@@ -11,7 +11,12 @@ def buscar(he: HashingExtensivel, chave: int):
         print(f'> Busca pela chave {chave}: Chave não encontrada.')
 
 def inserir(he: HashingExtensivel, chave: int):
-    pass
+    inseriu = he.op_inserir(chave)
+    if inseriu:
+        print(f'> Inserção da chave {chave}: Sucesso.')
+    else:
+        print(f'> Inserção da chave {chave}: Falha - Chave duplicada.')
+
 
 def remover(he: HashingExtensivel, chave: int):
     pass
@@ -32,10 +37,12 @@ def executa_operacao(arquivo_op, he):
 
     
 def imprime_diretorio(he: HashingExtensivel):
-    he.imprimir_diretorio()
-
+    impressao = he.imprimir_diretorio()
+    print(impressao)
+    
 def imprime_buckets(he: HashingExtensivel):
-    he.imprimir_buckets()
+    impressao = he.imprimir_buckets()
+    print(impressao)
 
 
 def main() -> None:
@@ -50,3 +57,6 @@ def main() -> None:
 
     he.finaliza()
     #implementar tratamento de erros
+
+if __name__ == '__main__':
+    main()

@@ -5,7 +5,7 @@ import os
 #Constantes
 ARQUIVO_BK = "buckets.dat"
 ARQUIVO_DIR = "diretorio.dat"
-TAM_MAX_BK = 5
+TAM_MAX_BK = 2
 NULO = -1
 
 FORMATO_PROF = f'i'
@@ -36,12 +36,12 @@ class HashingExtensivel:
         #Verifica se o hashing existe 
         if os.path.exists(arq_bk) and os.path.exists(arq_dir):
             #Abrindo arquivo de diretório e de bucket
-            self.arq_bk = open(arq_bk, 'rb+')
-            self.arq_dir = open(arq_bk, 'rb+')
+            arq_bk = open(arq_bk, 'rb+')
+            arq_dir = open(arq_dir, 'rb+')
 
             #Lendo a profundidade do diretorio
-            self.arq_dir.seek(0)
-            prof_bytes = self.arq_dir.read(PROFSIZE)
+            arq_dir.seek(0)
+            prof_bytes = arq_dir.read(PROFSIZE)
             prof_dir = unpack(FORMATO_PROF, prof_bytes)[0]
             #Calculo do tamanho do diretorio
             tam = pow(2, prof_dir)
@@ -52,14 +52,14 @@ class HashingExtensivel:
             self.dir.refs = []
            
             for i in range(tam):
-                ref_bytes = self.arq_dir.read(REFSIZE)
+                ref_bytes = arq_dir.read(REFSIZE)
                 rrn = unpack(FORMATO_REF, ref_bytes)[0]
                 self.dir.refs.append(rrn)
 
         else:
             #Cria arquivos
-            self.arq_bk = open(arq_bk, 'w+b')
-            self.arq_dir = open(arq_dir, 'w+b')
+            arq_bk = open(arq_bk, 'w+b')
+            arq_dir = open(arq_dir, 'w+b')
 
             #Cria um objeto diretorio e atribua a dir
             self.dir = Diretorio()
@@ -70,14 +70,13 @@ class HashingExtensivel:
             bucket = Bucket()
             # O serve para* desmontar a lista de chaves e enviar cada valor separado para o pack exemplo pack(FORMATO_BK,0,0,[1,2,3]) teremos = pack(FORMATO_BK,0,0,1,2,3)
             dados_bk = pack(FORMATO_BK, bucket.prof, bucket.cont, *bucket.chaves)
-            self.arq_bk.seek(0)
-            self.arq_bk.write(dados_bk)
+            arq_bk.seek(0)
+            arq_bk.write(dados_bk)
 
             #Atribua seu RRN ao dir.refs
             self.dir.refs == [0]
-
-
-    def gerar_endereco(chave, profundidade):
+     
+    def gerar_endereco(self,chave, profundidade):
         '''Função hash para gerar endereço da chave'''
         val_ret = 0 #Armazenará a sequência de bits
         mascara = 1 #Para extrair o bit menos significativo
@@ -105,8 +104,8 @@ class HashingExtensivel:
             dados_bk = unpack(FORMATO_BK,bk_bytes)
             bk_encontrado.prof = dados_bk[0]
             bk_encontrado.cont = dados_bk[1]
-            bk_encontrado.chaves = dados_bk[2: 2 + bk_encontrado.cont]
-
+            bk_encontrado.chaves = list(dados_bk[2: 2 + bk_encontrado.cont])
+            bk_encontrado.chaves += [NULO] * (TAM_MAX_BK - len(bk_encontrado.chaves))
             #Procura pela chave
             for reg in bk_encontrado.chaves:
                 if reg == chave:
@@ -166,27 +165,30 @@ class HashingExtensivel:
 
         #Redistribui as chaves entre bucket e novo_bucket considerando a dir_prof
         redistribuir = []
-        bucket.chaves = []
-        novo_bk.chaves = []
 
         for chave in bucket.chaves:
             if chave != NULO:
                 redistribuir.append(chave)
 
+        bucket.chaves = []
+        novo_bk.chaves = []
+
+        novo_bk.chaves = [NULO] * TAM_MAX_BK
+        bucket.chaves = [NULO] * TAM_MAX_BK
+        novo_bk.cont = 0
+        bucket.cont = 0
+
         for chave in redistribuir:
-            endereco = self.gerar_endereco(chave,self.dir.prof_dir) 
+            endereco = self.gerar_endereco(chave, self.dir.prof_dir) 
             ref = self.dir.refs[endereco]
             if ref == ref_novo_bucket:
-                novo_bk.chaves.append(chave)
+                if novo_bk.cont < TAM_MAX_BK:
+                    novo_bk.chaves[novo_bk.cont] = chave
+                    novo_bk.cont += 1
             else:
-                bucket.chaves.append(chave)
-
-        #Preenche o final com NULO até TAM_MAX_BK
-        bucket.cont = len(bucket.chaves)
-        bucket.chaves += [NULO]*(TAM_MAX_BK - bucket.cont )
-
-        novo_bk.cont = len(novo_bk.chaves)
-        novo_bk.chaves += [NULO]*(TAM_MAX_BK - novo_bk.cont)
+                if bucket.cont < TAM_MAX_BK:
+                    bucket.chaves[bucket.cont] = chave
+                    bucket.cont += 1
 
         #Escreva bucket e novo_bucket nos respectivos RRNs do arquivo de buckets
         arq_bk.seek(ref_bk * BKSIZE)
@@ -196,7 +198,6 @@ class HashingExtensivel:
         arq_bk.seek(ref_novo_bucket * BKSIZE)
         dados_novo_bk = pack(FORMATO_BK, novo_bk.prof, novo_bk.cont, *novo_bk.chaves)
         arq_bk.write(dados_novo_bk)
-
 
 
     def dobrar_dir(self):
@@ -260,20 +261,37 @@ class HashingExtensivel:
         arq_bk.close()
         
 
-#Nao tem pseudocodigo
-    def carregar_diretorio():
-        pass
-
-    def salvar_diretorio():
-        pass
-
-    def imprimir_diretorio(self,):
+    def imprimir_diretorio(self):
         tam = pow(2, self.dir.prof_dir)
-        saida = f'Tamanho atual do diretorio = {tam}\n'
+        total_bk = []
+        saida = f'----- Diretório -----\n'
         for i, ref in enumerate(self.dir.refs): #Revisar o uso do enumerate
             saida += f'dir[{i}] = bucket[{ref}]\n'
+            if ref not in total_bk:
+                total_bk.append(ref)
+
+        saida += f'Profundidade = {self.dir.prof_dir}\n'
+        saida += f'Tamanho atual = {tam}\n' 
+        saida += f'Total de buckets = {len(total_bk)}'
         return saida
       
         
-    def imprimir_buckets():
-        pass
+    def imprimir_buckets(self) -> str:
+        arq_bk = open(ARQUIVO_BK, 'rb')
+        bk_bytes = arq_bk.read(BKSIZE)
+        n = 0 
+        saida = '----- Buckets -----\n'
+        while bk_bytes:
+            bucket = Bucket()
+            dados_bk = unpack(FORMATO_BK,bk_bytes)
+            bucket.prof = dados_bk[0]
+            bucket.cont = dados_bk[1]
+            bucket.chaves = list(dados_bk[2: 2 + bucket.cont])
+            bucket.chaves += [NULO] * (TAM_MAX_BK - len(bucket.chaves))
+            saida += f'Bucket {n} (Prof = {bucket.prof}):\n'
+            saida += f'ContaChaves = {bucket.cont}\n'
+            saida += f'Chaves = {bucket.chaves}\n'
+            saida += '\n'
+            bk_bytes = arq_bk.read(BKSIZE)
+            n += 1
+        return saida
