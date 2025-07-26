@@ -46,16 +46,27 @@ def imprime_buckets(he: HashingExtensivel):
 
 
 def main() -> None:
-    he = HashingExtensivel() #instância da classe Hashing
-
-    if len(argv) == 3 and argv[1] == '-e':
-        executa_operacao(argv[2], he)
-    elif len(argv) == 2 and argv[1] == '-pd':
-        imprime_diretorio(he)
-    elif len(argv) == 2 and argv[1] == '-pb':
-        imprime_buckets(he)
-
-    he.finaliza()
+    
+    try:
+        if len(argv) == 3 and argv[1] == '-e':
+            he = HashingExtensivel() #instância da classe Hashing
+            executa_operacao(argv[2], he)
+            he.finaliza()
+        elif len(argv) == 2 and argv[1] == '-pd':
+            he = HashingExtensivel() 
+            imprime_diretorio(he)
+            he.finaliza()
+        elif len(argv) == 2 and argv[1] == '-pb':
+            he = HashingExtensivel()
+            imprime_buckets(he)
+            he.finaliza()
+        else:
+            raise ValueError("Argumentos inválidos.")
+    except:
+        print("A linha de comando deve conter:\n"
+        "Para executar operações: Script -e arq_operações\n"
+        "Para imprimir diretório: Script -pd"
+        "Para imprimir buckets: Script -pb")
     #implementar tratamento de erros
 
 if __name__ == '__main__':
