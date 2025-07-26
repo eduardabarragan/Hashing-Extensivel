@@ -19,7 +19,11 @@ def inserir(he: HashingExtensivel, chave: int):
 
 
 def remover(he: HashingExtensivel, chave: int):
-    pass
+    removeu = he.op_remover(chave)
+    if removeu:
+        print(f'> Remoção da chave {chave}: Sucesso.')
+    else:
+        print(f'> Remoção da chave {chave}: Falha - Chave não encontrada.')
 
 def executa_operacao(arquivo_op, he):
 

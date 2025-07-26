@@ -103,6 +103,10 @@ class HashingExtensivel:
             bk_encontrado = Bucket()
             dados_bk = unpack(FORMATO_BK,bk_bytes)
             bk_encontrado.prof = dados_bk[0]
+
+            if bk_encontrado.prof == NULO:
+                return False, ref_bk, bk_encontrado
+
             bk_encontrado.cont = dados_bk[1]
             bk_encontrado.chaves = list(dados_bk[2: 2 + bk_encontrado.cont])
             bk_encontrado.chaves += [NULO] * (TAM_MAX_BK - len(bk_encontrado.chaves))
@@ -118,8 +122,9 @@ class HashingExtensivel:
     def op_inserir(self, chave: int):
         #busca pela chave usando a função op_buscar
         achou, ref_bk, bk_encontrado = self.op_buscar(chave)
-        if achou:
-            return False  # Erro: chave duplicada
+        if (achou) or  (bk_encontrado.prof == NULO):
+                return False  # Erro: chave duplicada ou bucket removido logicamente
+
         self.inserir_chave_bk(chave, ref_bk, bk_encontrado) 
         return True
 
@@ -229,7 +234,7 @@ class HashingExtensivel:
         achou, ref_bk, bk_encontrado = self.op_buscar(chave)
         if not achou: 
             return False
-        return self.remover_chave_bk (chave, ref_bk, bk_encontrado)
+        return self.remover_chave_bk(chave, ref_bk, bk_encontrado)
 
     def remover_chave_bk(self, chave, ref_bk, bucket:Bucket):
         removeu=False
@@ -239,6 +244,7 @@ class HashingExtensivel:
                 bucket.chaves[i] = NULO
                 #Atualiza contador e reorganiza as chaves
                 bucket.cont-=1
+                bucket.chaves += [NULO] * (TAM_MAX_BK - len(bucket.chaves)) #reorganiza a lista de chaves
                 removeu = True
             
         if removeu:
@@ -302,12 +308,58 @@ class HashingExtensivel:
         end_amigo = end_comum ^ 1 #com o bit menos significativo invertido
         return True, end_amigo
 
-    def combinar_bk(ref_bk, bucket, ref_amigo, bk_amigo):
-        #Só vem para cá depois da verificação do bucket amigo e se tem espaço. Se tiver, chama essa função para de fato concatenar
-        pass
+    def combinar_bk(self,ref_bk, bucket: Bucket, ref_amigo, bk_amigo: Bucket):
+        #Copia as chaves do bk_amigo para bucket
+        n = 0
+        while bk_amigo.cont > 0:
+            for i in range(TAM_MAX_BK):
+                if bucket.chaves[i] == NULO:
+                    bucket.chaves[i] = bk_amigo.chaves[n]  
+                    bk_amigo.chaves[n]  = NULO
+                    #Atualiza a quantidade de chaves 
+                    bucket.cont += 1
+                    bk_amigo.cont -= 1
+                    n +=1  
+        
+        #Decrementa a profundidade
+        bucket.prof -= 1
 
-    def tentar_diminuir_dir():
-        pass
+        #Reescreve o bucket em ref_bk no arquivo de buckets
+        with open(ARQUIVO_BK, 'r+b') as arq_bk:
+                arq_bk.seek(ref_bk * BKSIZE)
+                arq_bk.write(pack(FORMATO_BK, bucket.prof, bucket.cont, *bucket.chaves))
+                #Remova bk_amigo do ref_amigo no arquivo de buckets
+                bk_amigo.prof = NULO #Remoção lógica
+
+                arq_bk.seek(ref_amigo * BKSIZE)
+                arq_bk.write(pack(FORMATO_BK, bk_amigo.prof, bk_amigo.cont, *bk_amigo.chaves))
+        
+        return bucket
+
+        
+
+    def tentar_diminuir_dir(self):
+        if self.dir.prof_dir == 0:
+            return False
+        
+        tam_dir = pow(2, self.dir.prof_dir)
+        diminuir = True
+
+        for i in range(0,tam_dir -1,2):
+            if self.dir.refs[i] != self.dir.refs[i+1]:
+                diminuir = False
+                break
+
+        if diminuir:
+            novas_refs = []
+            for i in range(0,len(self.dir.refs),2):
+                novas_refs.append(self.dir.refs[i])
+            
+            self.dir.refs = novas_refs
+            self.dir.prof_dir -= 1
+        
+        return diminuir
+
 
     def finaliza(self):
         #Abre o arquivo de diretorio e de buckets
@@ -351,12 +403,18 @@ class HashingExtensivel:
             bucket = Bucket()
             dados_bk = unpack(FORMATO_BK,bk_bytes)
             bucket.prof = dados_bk[0]
-            bucket.cont = dados_bk[1]
-            bucket.chaves = list(dados_bk[2: 2 + bucket.cont])
-            bucket.chaves += [NULO] * (TAM_MAX_BK - len(bucket.chaves))
-            saida += f'Bucket {n} (Prof = {bucket.prof}):\n'
-            saida += f'ContaChaves = {bucket.cont}\n'
-            saida += f'Chaves = {bucket.chaves}\n'
+
+            if bucket.prof == NULO:
+                saida += f'Bucket {n} -- Removido'
+            
+            else:
+                bucket.cont = dados_bk[1]
+                bucket.chaves = list(dados_bk[2: 2 + bucket.cont])
+                bucket.chaves += [NULO] * (TAM_MAX_BK - len(bucket.chaves))
+                saida += f'Bucket {n} (Prof = {bucket.prof}):\n'
+                saida += f'ContaChaves = {bucket.cont}\n'
+                saida += f'Chaves = {bucket.chaves}\n'
+
             saida += '\n'
             bk_bytes = arq_bk.read(BKSIZE)
             n += 1
