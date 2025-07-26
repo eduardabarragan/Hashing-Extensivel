@@ -225,53 +225,40 @@ class HashingExtensivel:
         return novo_inicio, novo_fim
 
     #Funcao de remocao
-    def op_remover(chave):
-        #remover chave do bucket
-        #concatena? Para concatenar, verifica se PL do bucket que está sendo analisado e PG são iguais e se tem bucket amigo(encontrar bk amigo-> ver bits)
-        # SE não concatenar, acaba remoção
-        #SE concatenar,o bucket analisado e seu amigo passam a ter a mesma referencia no diretorio e decrementa PL dos dois verifica se é possivel reduzir diretorio analisando se cada bucket do diretorio tem pelo menos duas referencias
-        #se N reduz, acaba
-        #se reduz, reduza  as referências do diretorio, diminuiu PG e reorganiza chaves e verifica novamente se da para concatenar
-
-
-        pass
-
+    def op_remover(self, chave):
+        achou, ref_bk, bk_encontrado = self.op_buscar(chave)
+        if not achou: 
+            return False
+        return self.remover_chave_bk (chave, ref_bk, bk_encontrado)
 
     def remover_chave_bk(self, chave, ref_bk, bucket:Bucket):
-        #quero remover por exemplo a chave K4, tenho que buscar ela nos buckets, se eu achar,removo, se n achar, fala que n existe
-        #busca pela chave usando a função op_buscar
         removeu=False
-        if chave in bucket.chaves: #Se achar a chave
-            #Remove a chave do bucket
-            pos=bucket.chaves.index(chave)
-            bucket.chaves[pos]=None
-            chave_removida=chave
-           
-            #Atualiza contador e reorganiza as chaves
-            bucket.cont-=1
-            bucket.chaves=bucket.chaves = [k for k in bucket.chaves if k != NULO]
-            bucket.chaves += [NULO] * (TAM_MAX_BK - len(bucket.chaves))
-
-
+        for i in range(TAM_MAX_BK):
+            if chave == bucket.chaves[i]:
+                chave_removida = chave
+                bucket.chaves[i] = NULO
+                #Atualiza contador e reorganiza as chaves
+                bucket.cont-=1
+                removeu = True
+            
+        if removeu:
             #Reescreve bucket no arquivo
             with open(ARQUIVO_BK, 'r+b') as arq_bk:
                 arq_bk.seek(ref_bk * BKSIZE)
                 arq_bk.write(pack(FORMATO_BK, bucket.prof, bucket.cont, *bucket.chaves))
 
-
-            removeu = True
-        if removeu: #Se removeu, verifica se da para concatenar (encontrar_bk_amigo tem que verificar se PL=PG e se bits são diferentes... ?)
-            self.tentar_combinar_bk (chave_removida, ref_bk, bucket)
+            self.tentar_combinar_bk(chave_removida, ref_bk, bucket)
             return True
        
         else:
             return False
+        
     def tentar_combinar_bk (self,chave_removida, ref_bk, bucket: Bucket):
         #Usa encontrar_bk_amigo para verificar se o bucket atual pode concatenar com amigo
 
         tem_amigo, endereco_amigo = self.encontrar_bk_amigo(chave_removida, bucket)
         if not tem_amigo:
-            print("Fim da remoção")
+            return
             
 
         # Pega referência do amigo no diretório
@@ -279,17 +266,20 @@ class HashingExtensivel:
 
         # Lê o bucket amigo do arquivo
         with open(ARQUIVO_BK, 'rb') as arq_bk:
+
             arq_bk.seek(ref_amigo * BKSIZE)
             dados_amigo = unpack(FORMATO_BK, arq_bk.read(BKSIZE))
+
             bk_amigo = Bucket()
             bk_amigo.prof = dados_amigo[0] #PL do bucket
             bk_amigo.cont = dados_amigo[1] #Contador de chaves
             bk_amigo.chaves = list(dados_amigo[2:2 + bk_amigo.cont])
             bk_amigo.chaves += [NULO] * (TAM_MAX_BK - len(bk_amigo.chaves))
 
-        # Verifica se juntos cabem em um único bucket
-        if bk_amigo.cont + bucket.cont <= TAM_MAX_BK:
+        # Verifica se os buckets podem ser concatenados
+        if (bk_amigo.cont + bucket.cont) <= TAM_MAX_BK:
             #Se couber, chama combinar_bk para concatenar
+            
             bucket = self.combinar_bk(ref_bk, bucket, ref_amigo, bk_amigo)
 
             # Atualiza o diretório para apontar para o bucket combinado
