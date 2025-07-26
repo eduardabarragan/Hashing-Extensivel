@@ -238,7 +238,7 @@ class HashingExtensivel:
 
 
     def remover_chave_bk(self, chave, ref_bk, bucket:Bucket):
-        #quero remover por exemplo a chave K4, tenho que buscar ela nos buckets, se eu acahr,removo, se n achar, fala que n existe
+        #quero remover por exemplo a chave K4, tenho que buscar ela nos buckets, se eu achar,removo, se n achar, fala que n existe
         #busca pela chave usando a função op_buscar
         removeu=False
         if chave in bucket.chaves: #Se achar a chave
@@ -260,25 +260,60 @@ class HashingExtensivel:
 
 
             removeu = True
-        if removeu: #Se removeu, verifica se tem bucket amigo (tentar_combinar_bk tem que verificar se PL=PG e se bits são diferentes... ?)
+        if removeu: #Se removeu, verifica se da para concatenar (encontrar_bk_amigo tem que verificar se PL=PG e se bits são diferentes... ?)
             self.tentar_combinar_bk (chave_removida, ref_bk, bucket)
             return True
        
         else:
             return False
-    def tentar_combinar_bk (chave_removida, ref_bk, bucket):
-        pass
+    def tentar_combinar_bk (self,chave_removida, ref_bk, bucket: Bucket):
+        #Usa encontrar_bk_amigo para verificar se o bucket atual pode concatenar com amigo
+
+        tem_amigo, endereco_amigo = self.encontrar_bk_amigo(chave_removida, bucket)
+        if not tem_amigo:
+            print("Fim da remoção")
+            
+
+        # Pega referência do amigo no diretório
+        ref_amigo = self.dir.refs[endereco_amigo]
+
+        # Lê o bucket amigo do arquivo
+        with open(ARQUIVO_BK, 'rb') as arq_bk:
+            arq_bk.seek(ref_amigo * BKSIZE)
+            dados_amigo = unpack(FORMATO_BK, arq_bk.read(BKSIZE))
+            bk_amigo = Bucket()
+            bk_amigo.prof = dados_amigo[0] #PL do bucket
+            bk_amigo.cont = dados_amigo[1] #Contador de chaves
+            bk_amigo.chaves = list(dados_amigo[2:2 + bk_amigo.cont])
+            bk_amigo.chaves += [NULO] * (TAM_MAX_BK - len(bk_amigo.chaves))
+
+        # Verifica se juntos cabem em um único bucket
+        if bk_amigo.cont + bucket.cont <= TAM_MAX_BK:
+            #Se couber, chama combinar_bk para concatenar
+            bucket = self.combinar_bk(ref_bk, bucket, ref_amigo, bk_amigo)
+
+            # Atualiza o diretório para apontar para o bucket combinado
+            self.dir.refs[endereco_amigo] = ref_bk
+
+            # Após a combinação, tenta diminuir o diretório
+            if self.tentar_diminuir_dir():
+                # Se conseguiu diminuir, tenta combinar novamente ->recursão
+                self.tentar_combinar_bk(chave_removida, ref_bk, bucket)
+
 
     def encontrar_bk_amigo(self, chave_removida, bucket:Bucket):
+        #Localiza o possível amigo, retorna se existe (True/False) e qual o endereço dele(end_amigo)
         #precisamos analisar se PL=PG e se eles diferenciam apenas de um bit no dir, contudo nessa função estamos analisando os bits menos significativos. 
         if (self.dir.prof_dir == 0) or (bucket.prof < self.dir.prof_dir):
             return False, None
+       
 
         end_comum = self.gerar_endereco(chave_removida, bucket.prof)
         end_amigo = end_comum ^ 1 #com o bit menos significativo invertido
         return True, end_amigo
 
     def combinar_bk(ref_bk, bucket, ref_amigo, bk_amigo):
+        #Só vem para cá depois da verificação do bucket amigo e se tem espaço. Se tiver, chama essa função para de fato concatenar
         pass
 
     def tentar_diminuir_dir():
