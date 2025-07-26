@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from struct import pack, unpack, calcsize
 import io
 import os
