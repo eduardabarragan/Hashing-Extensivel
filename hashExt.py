@@ -204,10 +204,43 @@ class HashingExtensivel:
 
     #Funcao de remocao
     def op_remover(chave):
+        #remover chave do bucket 
+        #concatena? Para concatenar, verifica se PL do bucket que está sendo analisado e PG são iguais e se tem bucket amigo(encontrar bk amigo-> ver bits)
+        # SE não concatenar, acaba remoção
+        #SE concatenar,o bucket analisado e seu amigo passam a ter a mesma referencia no diretorio e decrementa PL dos dois verifica se é possivel reduzir diretorio analisando se cada bucket do diretorio tem pelo menos duas referencias
+        #se N reduz, acaba
+        #se reduz, reduza  as referências do diretorio, diminuiu PG e reorganiza chaves e verifica novamente se da para concatenar
+
         pass
 
-    def remover_chave_bk(chave, ref_bk, bucket):
-        pass
+    def remover_chave_bk(chave, ref_bk, bucket:Bucket):
+        #quero remover por exemplo a chave K4, tenho que buscar ela nos buckets, se eu acahr,removo, se n achar, fala que n existe
+        #busca pela chave usando a função op_buscar
+        removeu=False
+        if chave in bucket.chaves: #Se achar a chave
+            #Remove a chave do bucket
+            pos=bucket.chaves.index(chave)
+            bucket.chaves[pos]=None
+            chave_removida=chave
+            
+            #Atualiza contador e reorganiza as chaves
+            bucket.cont-=1
+            bucket.chaves=bucket.chaves = [k for k in bucket.chaves if k != NULO]
+            bucket.chaves += [NULO] * (TAM_MAX_BK - len(bucket.chaves))
+
+            #Reescreve bucket no arquivo
+            with open(ARQUIVO_BK, 'r+b') as arq_bk:
+                arq_bk.seek(ref_bk * BKSIZE)
+                arq_bk.write(pack(FORMATO_BK, bucket.prof, bucket.cont, *bucket.chaves))
+
+            removeu = True
+        if removeu: #Se removeu, verifica se tem bucket amigo (tentar_combinar_bk tem que verificar se PL=PG e se bits são diferentes... ?)
+            self.tentar_combinar_bk (chave_removida, ref_bk, bucket)
+            return True
+        
+        else:
+            return False
+ 
 
     def tentar_combinar_bk (chave_removida, ref_bk, bucket):
         pass
