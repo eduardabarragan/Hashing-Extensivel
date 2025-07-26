@@ -5,7 +5,7 @@ import os
 #Constantes
 ARQUIVO_BK = "buckets.dat"
 ARQUIVO_DIR = "diretorio.dat"
-TAM_MAX_BK = 2
+TAM_MAX_BK = 5
 NULO = -1
 
 FORMATO_PROF = f'i'
@@ -142,41 +142,63 @@ class HashingExtensivel:
             self.op_inserir(chave)  #Recursão indireta
 
 
-    def dividir_bk(self, ref_bk, bucket):
-
-        if bucket.prof == self.prof_dir:
+    def dividir_bk(self, ref_bk: int, bucket: Bucket):
+        if bucket.prof == self.dir.prof_dir:
             self.dobrar_dir()
 
-        novo_bucket = Bucket()
-        ref_novo_bucket = self.alocar_novo_bucket(novo_bucket)
+        #Crie um novo_bucket
+        novo_bk: Bucket = Bucket()
+        arq_bk = open(ARQUIVO_BK, 'rb+')
 
+        #Atribui o seu RRN a ref_novo_bucket
+        arq_bk.seek(0, 2)  
+        tam_arq = arq_bk.tell()
+        ref_novo_bucket = tam_arq // BKSIZE
+
+        novo_inicio, novo_fim = self.encontrar_novo_intervalo(bucket)
+        #Insere novo_bucket no dir de acordo com novo_inicio e novo_fim
+        for i in range(novo_inicio,novo_fim + 1):
+            self.dir.refs[i] = ref_novo_bucket
+        
+        #Incrementa bucket.prof e novo_bucket.prof receber bucket.prof
         bucket.prof += 1
-        novo_bucket.prof = bucket.prof
+        novo_bk.prof = bucket.prof
 
-        for i in range(len(self.dir.refs)):
-            endereco_bin = format(i, f'0{self.prof_dir}b')  # binário do índice com padding
-            if endereco_bin[-bucket.prof:] == gerar_endereco_bits(ref_novo_bucket, bucket.prof):
-                if self.dir.refs[i] == ref_bk:
-                    self.dir.refs[i] = ref_novo_bucket
+        #Redistribui as chaves entre bucket e novo_bucket considerando a dir_prof
+        redistribuir = []
 
-        todos = bucket.registros.copy()
-        bucket.registros.clear()
-        novo_bucket.registros.clear()
+        for chave in bucket.chaves:
+            if chave != NULO:
+                redistribuir.append(chave)
 
-        for chave in todos:
-            endereco = gerar_endereço(chave, bucket.prof)
-            if self.dir.refs[endereco] == ref_bk:
-                bucket.registros.append(chave)
+        bucket.chaves = []
+        novo_bk.chaves = []
+
+        novo_bk.chaves = [NULO] * TAM_MAX_BK
+        bucket.chaves = [NULO] * TAM_MAX_BK
+        novo_bk.cont = 0
+        bucket.cont = 0
+
+        for chave in redistribuir:
+            endereco = self.gerar_endereco(chave, self.dir.prof_dir) 
+            ref = self.dir.refs[endereco]
+            if ref == ref_novo_bucket:
+                if novo_bk.cont < TAM_MAX_BK:
+                    novo_bk.chaves[novo_bk.cont] = chave
+                    novo_bk.cont += 1
             else:
-                novo_bucket.registros.append(chave)
+                if bucket.cont < TAM_MAX_BK:
+                    bucket.chaves[bucket.cont] = chave
+                    bucket.cont += 1
 
-        bucket.cont = len(bucket.registros)
-        novo_bucket.cont = len(novo_bucket.registros)
-
-        escrever_bucket(ref_bk, bucket)
-        escrever_bucket(ref_novo_bucket, novo_bucket)
-
-
+        #Escreva bucket e novo_bucket nos respectivos RRNs do arquivo de buckets
+        arq_bk.seek(ref_bk * BKSIZE)
+        dados_bk = pack(FORMATO_BK, bucket.prof, bucket.cont, *bucket.chaves)
+        arq_bk.write(dados_bk)
+        
+        arq_bk.seek(ref_novo_bucket * BKSIZE)
+        dados_novo_bk = pack(FORMATO_BK, novo_bk.prof, novo_bk.cont, *novo_bk.chaves)
+        arq_bk.write(dados_novo_bk)
 
     def dobrar_dir(self):
         '''Caso o diretório precise ser espandido, essa funçao serve para dobrar o tamanho do diretório '''
