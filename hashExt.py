@@ -240,12 +240,15 @@ class HashingExtensivel:
         removeu=False
         for i in range(TAM_MAX_BK):
             if chave == bucket.chaves[i]:
+                # Remove chave e desloca elementos
                 chave_removida = chave
-                bucket.chaves[i] = NULO
-                #Atualiza contador e reorganiza as chaves
-                bucket.cont-=1
-                bucket.chaves += [NULO] * (TAM_MAX_BK - len(bucket.chaves)) #reorganiza a lista de chaves
+                for j in range(i, TAM_MAX_BK - 1):
+                    bucket.chaves[j] = bucket.chaves[j + 1]  # Desloca chaves
+                bucket.chaves[TAM_MAX_BK - 1] = NULO  # Última posição vazia
+                bucket.cont -= 1
                 removeu = True
+                break  # Interrompe após encontrar a chave
+    
             
         if removeu:
             #Reescreve bucket no arquivo
@@ -262,7 +265,7 @@ class HashingExtensivel:
     def tentar_combinar_bk (self,chave_removida, ref_bk, bucket: Bucket):
         #Usa encontrar_bk_amigo para verificar se o bucket atual pode concatenar com amigo
 
-        tem_amigo, endereco_amigo = self.encontrar_bk_amigo(chave_removida, bucket)
+        tem_amigo, endereco_amigo = self.encontrar_bk_amigo(bucket)
         if not tem_amigo:
             return
             
@@ -271,7 +274,7 @@ class HashingExtensivel:
         ref_amigo = self.dir.refs[endereco_amigo]
 
         # Lê o bucket amigo do arquivo
-        with open(ARQUIVO_BK, 'rb') as arq_bk:
+        with open(ARQUIVO_BK, 'r+b') as arq_bk:
 
             arq_bk.seek(ref_amigo * BKSIZE)
             dados_amigo = unpack(FORMATO_BK, arq_bk.read(BKSIZE))
@@ -279,8 +282,8 @@ class HashingExtensivel:
             bk_amigo = Bucket()
             bk_amigo.prof = dados_amigo[0] #PL do bucket
             bk_amigo.cont = dados_amigo[1] #Contador de chaves
-            bk_amigo.chaves = list(dados_amigo[2:2 + bk_amigo.cont])
-            bk_amigo.chaves += [NULO] * (TAM_MAX_BK - len(bk_amigo.chaves))
+            bk_amigo.chaves = list(dados_amigo[2:2 + TAM_MAX_BK])
+            
 
         # Verifica se os buckets podem ser concatenados
         if (bk_amigo.cont + bucket.cont) <= TAM_MAX_BK:
@@ -289,7 +292,9 @@ class HashingExtensivel:
             bucket = self.combinar_bk(ref_bk, bucket, ref_amigo, bk_amigo)
 
             # Atualiza o diretório para apontar para o bucket combinado
-            self.dir.refs[endereco_amigo] = ref_bk
+            for i in range(len(self.dir.refs)):
+                if self.dir.refs[i] == ref_amigo:
+                    self.dir.refs[i] = ref_bk
 
             # Após a combinação, tenta diminuir o diretório
             if self.tentar_diminuir_dir():
@@ -297,14 +302,15 @@ class HashingExtensivel:
                 self.tentar_combinar_bk(chave_removida, ref_bk, bucket)
 
 
-    def encontrar_bk_amigo(self, chave_removida, bucket:Bucket):
+    def encontrar_bk_amigo(self, bucket:Bucket):
         #Localiza o possível amigo, retorna se existe (True/False) e qual o endereço dele(end_amigo)
         #precisamos analisar se PL=PG e se eles diferenciam apenas de um bit no dir, contudo nessa função estamos analisando os bits menos significativos. 
         if (self.dir.prof_dir == 0) or (bucket.prof < self.dir.prof_dir):
             return False, None
-       
 
-        end_comum = self.gerar_endereco(chave_removida, bucket.prof)
+        chave = bucket.chaves[0]
+
+        end_comum = self.gerar_endereco(chave, bucket.prof)
         end_amigo = end_comum ^ 1 #com o bit menos significativo invertido
         return True, end_amigo
 
@@ -388,6 +394,7 @@ class HashingExtensivel:
             if ref not in total_bk:
                 total_bk.append(ref)
 
+        saida+='\n'
         saida += f'Profundidade = {self.dir.prof_dir}\n'
         saida += f'Tamanho atual = {tam}\n' 
         saida += f'Total de buckets = {len(total_bk)}'
@@ -405,7 +412,7 @@ class HashingExtensivel:
             bucket.prof = dados_bk[0]
 
             if bucket.prof == NULO:
-                saida += f'Bucket {n} -- Removido'
+                saida += f'Bucket {n} --> Removido\n'
             
             else:
                 bucket.cont = dados_bk[1]
