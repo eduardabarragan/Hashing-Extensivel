@@ -237,7 +237,7 @@ class HashingExtensivel:
         pass
 
 
-    def remover_chave_bk(chave, ref_bk, bucket:Bucket):
+    def remover_chave_bk(self, chave, ref_bk, bucket:Bucket):
         #quero remover por exemplo a chave K4, tenho que buscar ela nos buckets, se eu acahr,removo, se n achar, fala que n existe
         #busca pela chave usando a função op_buscar
         removeu=False
@@ -269,18 +269,13 @@ class HashingExtensivel:
     def tentar_combinar_bk (chave_removida, ref_bk, bucket):
         pass
 
-    def encontrar_bk_amigo(chave_removida, bucket, self):
+    def encontrar_bk_amigo(self, chave_removida, bucket:Bucket):
         #precisamos analisar se PL=PG e se eles diferenciam apenas de um bit no dir, contudo nessa função estamos analisando os bits menos significativos. 
-        if self.dir.prof_dir == 0 or bucket.prof < self.dir.prof.dir:
-            return None, False 
+        if (self.dir.prof_dir == 0) or (bucket.prof < self.dir.prof_dir):
+            return False, None
 
-        mascara = 1
-        chave = bucket.chaves[0]
-        end_comum = self.gerar_endereco(chave, bucket.prof)
-        end_comum = end_comum << 1
-        end_comum = end_comum | mascara
-        end_amigo = end_comum #com o bit menos significativo invertido
-        end_amigo = end_comum #XOR_ bitwise 1 # end_bk ^ 1
+        end_comum = self.gerar_endereco(chave_removida, bucket.prof)
+        end_amigo = end_comum ^ 1 #com o bit menos significativo invertido
         return True, end_amigo
 
     def combinar_bk(ref_bk, bucket, ref_amigo, bk_amigo):
